@@ -4,14 +4,15 @@ library(ggplot2)
 library(reshape2)
 library(plyr)
 library(readxl)
+library(broom)
 
-#  Assuming you have a path 'Maps' that you store your spatial files in.  This
-#  is all downloaded from <a href="http://www.naturalearthdata.com/downloads/">http://www.naturalearthdata.com/downloads/</a> using the
-#  1:50m "Medium" scale data.
+
+
+#  all downloaded from <a href="http://www.naturalearthdata.com/downloads/">http://www.naturalearthdata.com/downloads/</a> using the
+#  1:10m  scale data.
 
 # NOTE readOGR can't do tilde expansion!!!
 
-#nat.earth <- stack('~/Maps/NE2_50M_SR_W/NE2_50M_SR_W.tif')
 nat.earth <- stack('~/Documents/NaturalEarthData/HYP_LR_SR_W_DR/HYP_LR_SR_W_DR.tif')
 
 ne_lakes <- readOGR("/Users/eriq/Maps/natural-earth-10m/ne_10m_lakes",
@@ -50,6 +51,23 @@ quick.subset <- function(x, longlat){
   
   x.subset
 }
+
+# here eric implements the same thing but using tidyverse tools
+tidy_subset <- function(x, longlat) {
+  x@data$id <- rownames(x@data)
+  x.f <- broom::tidy(x) %>%
+    dplyr::left_join(., x@data, by = "id") %>%
+    dplyr::tbl_df() %>%
+    filter(long > longlat[1],
+           long < longlat[2],
+           lat > longlat[3],
+           lat < longlat[4])
+}
+
+
+system.time(tmp1 <- tidy_subset(ne_lakes, domain))  # the tidyverse version is twice as fast
+system.time(tmp2 <- quick.subset(ne_lakes, domain))
+
 
 domain <- c(-129, -110, 28, 50)
 lakes.subset <- quick.subset(ne_lakes, domain)
