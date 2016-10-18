@@ -2,9 +2,10 @@ library(raster)
 library(rgdal)
 library(ggplot2)
 library(reshape2)
-library(plyr)
 library(readxl)
 library(broom)
+library(stringr)
+library(dplyr)
 
 
 
@@ -24,11 +25,17 @@ ne_rivers <- readOGR('/Users/eriq/Maps/natural-earth-10m/ne_10m_rivers_lake_cent
 usgs_rivers <- readOGR('/Users/eriq/Maps/hydrogm020_nt00015',
                        'hydrogl020')
 
+# and immediately restrict that to just the west coast
+usgs_rivers <- usgs_rivers[usgs_rivers$STATE %in% c("CA", "OR", "WA", "ID", "NV", "MT"), ]
+
 ne_coast <- readOGR("/Users/eriq/Maps/natural-earth-10m/ne_10m_coastline",
                     "ne_10m_coastline")
 
 state_prov <- readOGR("/Users/eriq/Maps/natural-earth-10m/ne_10m_admin_1_states_provinces_lines",
                       "ne_10m_admin_1_states_provinces_lines")
+
+# and immediately drop all but canada and the US:
+state_prov <- state_prov[state_prov$adm0_name %in% c("United States of America", "Canada"),]
 
 country_bound <- readOGR("/Users/eriq/Maps/natural-earth-10m/ne_10m_admin_0_boundary_lines_land",
                          "ne_10m_admin_0_boundary_lines_land")
@@ -70,12 +77,14 @@ system.time(tmp2 <- quick.subset(ne_lakes, domain))
 
 
 domain <- c(-129, -110, 28, 50)
-lakes.subset <- quick.subset(ne_lakes, domain)
-river.subset <- quick.subset(ne_rivers, domain)
-coast.subset <- quick.subset(ne_coast, domain)
-vent.subset <- quick.subset(vent, domain)
-state.subset <- quick.subset(state_prov, domain)
-country.subset <- quick.subset(country_bound, domain)
+lakes.subset <- tidy_subset(ne_lakes, domain)
+river.subset <- tidy_subset(ne_rivers, domain)
+coast.subset <- tidy_subset(ne_coast, domain)
+vent.subset <- tidy_subset(vent, domain)
+usgs.subset <- tidy_subset(usgs_rivers, domain) %>%
+  filter(F_CODE %in% c(4,5))  # this retains only streams and canals
+state.subset <- tidy_subset(state_prov, domain)
+country.subset <- tidy_subset(country_bound, domain)
 
 nat.crop <- crop(nat.earth, y=extent(domain))
 
@@ -106,10 +115,10 @@ g <- ggplot(data = rast.table, aes(x = x, y = y)) +
   scale_alpha_discrete(range=c(1,0)) +
   geom_path(data=state.subset, aes(x = long, y = lat, group = group), color = 'gray30') +
   geom_path(data=country.subset, aes(x = long, y = lat, group = group), color = 'gray30') +
-  geom_path(data=lakes.subset, aes(x = long, y = lat, group = group), color = 'blue') +
-  geom_path(data=river.subset, aes(x = long, y = lat, group = group), color = 'blue') +
+  geom_path(data=river.subset, aes(x = long, y = lat, group = group), color = 'blue', size = 0.2) +
   geom_path(data=coast.subset, aes(x = long, y = lat, group = group), color = 'blue', size = 0.1) +
-  geom_path(data=vent.subset, aes(x = long, y = lat, group = group), color = 'blue', size = 0.12) +
+  geom_path(data=usgs.subset, aes(x = long, y = lat, group = group), colour = "blue", size = 0.06) +
+  geom_path(data=lakes.subset, aes(x = long, y = lat, group = group), color = 'blue', size = 0.1) +
 #  geom_point(data = samps, aes(x = long, y = lat)) +
   geom_text(data = samps, aes(x = long, y = lat, label = Number), size = 0.4) +
   scale_x_continuous(expand=c(0,0)) +
