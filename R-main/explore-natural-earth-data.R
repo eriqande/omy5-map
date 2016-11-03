@@ -1,3 +1,4 @@
+
 library(raster)
 library(rgdal)
 library(ggplot2)
@@ -106,11 +107,37 @@ samps <- read_excel("data/Omy5survey_table_LC.xlsx") %>%
   mutate(Number = paste(1:nrow(.)))
 
 
+# for now, make a dummy data frame of above-below pairs
+# so we can make barplot-like things with them 
+set.seed(5)
+npairs <- 30
+pairs <- data.frame(pairnum = 1:npairs,
+           resA = runif(npairs, .6, 1.0),
+           resB = runif(npairs, 0.0, 0.6))
+pairs$resA[c(1,6, 9, 18, 20)] <- NA
+pairs$resB[c(5, 15, 25)] <- NA
 
+# we have 49 to 29 degrees to play with.  That is 20 degrees of latitude.
+# If we do each bar as twice the distance between, that is 2/3 to 1/3.  
+# So, each unit is 20/npairs
+rectwidth <- 0.5
+xA <- -127
+xB <- -128
+height <- 20/npairs * .666667
 
+pairs2 <- pairs %>%
+  mutate(ymin = 49 - pairnum * 20/npairs,
+         anad_ymax = ymin + height,
+         resA_ymax = ymin + height * resA,
+         resB_ymax = ymin + height * resB
+         )
+
+pairsA <- pairs2 %>% filter(!is.na(resA)) %>% mutate(xmin = xA - 0.5 * rectwidth, xmax = xA + 0.5 * rectwidth)
+pairsB <- pairs2 %>% filter(!is.na(resB)) %>% mutate(xmin = xB - 0.5 * rectwidth, xmax = xB + 0.5 * rectwidth)
+smidge <- 0.02
 # et voila!
-g <- ggplot(data = rast.table, aes(x = x, y = y)) +
-  geom_raster(fill = rast.table$rgb, interpolate = TRUE) +
+g <- ggplot() +
+  geom_raster(data = rast.table, mapping = aes(x = x, y = y), fill = rast.table$rgb, interpolate = TRUE) +
   geom_polygon(data=lakes.subset, aes(x = long, y = lat, group = group), fill = '#ADD8E6') +
   scale_alpha_discrete(range=c(1,0)) +
   geom_path(data=state.subset, aes(x = long, y = lat, group = group), color = 'gray30') +
@@ -119,6 +146,12 @@ g <- ggplot(data = rast.table, aes(x = x, y = y)) +
   geom_path(data=coast.subset, aes(x = long, y = lat, group = group), color = 'blue', size = 0.1) +
   geom_path(data=usgs.subset, aes(x = long, y = lat, group = group), colour = "blue", size = 0.06) +
   geom_path(data=lakes.subset, aes(x = long, y = lat, group = group), color = 'blue', size = 0.1) +
+  geom_rect(data = pairsA, mapping = aes(ymin = ymin, ymax = anad_ymax, xmin = xmin, xmax = xmax), colour = NA, fill = "navy") +
+  geom_rect(data = pairsB, mapping = aes(ymin = ymin, ymax = anad_ymax, xmin = xmin, xmax = xmax), colour = NA, fill = "navy") +
+  geom_rect(data = pairsA, mapping = aes(ymin = ymin, ymax = resA_ymax, xmin = xmin, xmax = xmax), colour = NA, fill = "orange") +
+  geom_rect(data = pairsB, mapping = aes(ymin = ymin, ymax = resB_ymax, xmin = xmin, xmax = xmax), colour = NA, fill = "orange") +
+  geom_rect(data = pairsA, mapping = aes(ymin = ymin - smidge, ymax = anad_ymax + smidge, xmin = xmin, xmax = xmax), colour = "white", fill = NA) + 
+  geom_rect(data = pairsB, mapping = aes(ymin = ymin - smidge, ymax = anad_ymax + smidge, xmin = xmin, xmax = xmax), colour = "white", fill = NA) + 
 #  geom_point(data = samps, aes(x = long, y = lat)) +
   geom_text(data = samps, aes(x = long, y = lat, label = Number), size = 0.4) +
   scale_x_continuous(expand=c(0,0)) +
