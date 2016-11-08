@@ -70,8 +70,8 @@ tidy_subset <- function(x, longlat) {
 }
 
 
-system.time(tmp1 <- tidy_subset(ne_lakes, domain))  # the tidyverse version is twice as fast
-system.time(tmp2 <- quick.subset(ne_lakes, domain))
+#system.time(tmp1 <- tidy_subset(ne_lakes, domain))  # the tidyverse version is twice as fast
+#system.time(tmp2 <- quick.subset(ne_lakes, domain))
 
 
 # take subset of all that....It would be better to have all the shapefiles in a named list and lapply it
@@ -111,17 +111,18 @@ npops <- nrow(samps)
 # we have 49 to 29 degrees to play with.  That is 20 degrees of latitude.
 # If we do each bar as twice the distance between, that is 2/3 to 1/3.  
 # So, each unit is 20/npairs
-rectwidth <- 0.5
-xA <- -128
+rectwidth <- 1.0
+xA <- -128.5
 height <- 20/npops * .666667
 
 samps2 <- samps %>%
-  mutate(resA = (R08985_Total - R08985_4) / R08985_Total,
+  mutate(resA = (R08985_4) / R08985_Total,   # frequency of the "resident" allele
          xmin = xA,
          xmax = xA + rectwidth) %>%
   mutate(ymin = 49 - Number * 20/npops,
-         anad_ymax = ymin + height,
-         resA_ymax = ymin + height * resA,
+         ymax = ymin + height,
+         anad_xmax = xmax,
+         resA_xmax = xmin + rectwidth * resA,
          labely = ymin + 0.5 * height,
          labelx = -126.8, 
          dot_spot_x = -126.6,
@@ -145,11 +146,11 @@ g <- ggplot() +
   geom_path(data=coast.subset, aes(x = long, y = lat, group = group), color = 'blue', size = 0.1) +
   geom_path(data=usgs.subset, aes(x = long, y = lat, group = group), colour = "blue", size = 0.06) +
   geom_path(data=lakes.subset, aes(x = long, y = lat, group = group), color = 'blue', size = 0.1) +
-  geom_rect(data = samps2, mapping = aes(ymin = ymin, ymax = anad_ymax, xmin = xmin, xmax = xmax), colour = NA, fill = "navy") +
+  geom_rect(data = samps2, mapping = aes(ymin = ymin, ymax = ymax, xmin = xmin, xmax = anad_xmax), colour = NA, fill = "navy") +
 #  geom_rect(data = pairsB, mapping = aes(ymin = ymin, ymax = anad_ymax, xmin = xmin, xmax = xmax), colour = NA, fill = "navy") +
-  geom_rect(data = samps2, mapping = aes(ymin = ymin, ymax = resA_ymax, xmin = xmin, xmax = xmax), colour = NA, fill = "orange") +
+  geom_rect(data = samps2, mapping = aes(ymin = ymin, ymax = ymax, xmin = xmin, xmax = resA_xmax), colour = NA, fill = "orange") +
 #  geom_rect(data = pairsB, mapping = aes(ymin = ymin, ymax = resB_ymax, xmin = xmin, xmax = xmax), colour = NA, fill = "orange") +
-  geom_rect(data = samps2, mapping = aes(ymin = ymin - smidge, ymax = anad_ymax + smidge, xmin = xmin, xmax = xmax), colour = "white", fill = NA) + 
+  geom_rect(data = samps2, mapping = aes(ymin = ymin, ymax = ymax, xmin = xmin - smidge, xmax = xmax + smidge), colour = "white", fill = NA) + 
 #  geom_rect(data = pairsB, mapping = aes(ymin = ymin - smidge, ymax = anad_ymax + smidge, xmin = xmin, xmax = xmax), colour = "white", fill = NA) + 
 #  geom_point(data = samps, aes(x = long, y = lat)) +
 #  geom_text(data = samps2, aes(x = long, y = lat, label = Number), size = 0.4) +  # these are tiny numbers at the actual location
