@@ -103,6 +103,10 @@ samps <- read_delim("data/MapDataFrame.txt", delim = "\t") %>%
   filter(!is.na(lat)) %>%
   mutate(Number = 1:nrow(.))
 
+
+# write that out so we have the numbers on things.
+write_csv(samps, path = "output_numbered_pops.csv")
+
 npops <- nrow(samps)
 
 
