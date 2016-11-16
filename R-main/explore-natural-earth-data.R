@@ -97,11 +97,22 @@ rast.table$rgb <- with(rast.table, rgb(HYP_LR_SR_W_DR.1,
 
 
 # grab the locations such as they are now
-samps <- read_delim("data/MapDataFrame.txt", delim = "\t") %>%
-  mutate(lat = as.numeric(Lat),
-         long = as.numeric(Long)) %>%
+# these 6 lines are leftover from when i was re-ordering things
+# samps <- read_delim("data/MapDataFrame.txt", delim = "\t") %>%
+#   mutate(lat = as.numeric(Lat),
+#          long = as.numeric(Long)) %>%
+#   filter(!is.na(lat)) %>%
+#   arrange(desc(Lat)) %>%
+#   mutate(Number = 1:nrow(.))
+
+
+# grab re-ordered locations and put numbers on them
+samps <- read_csv("intermediate_pops.csv") %>%
   filter(!is.na(lat)) %>%
-  mutate(Number = 1:nrow(.))
+   arrange(Better.Order) %>%
+   mutate(Number = 1:nrow(.))
+
+
 
 
 # write that out so we have the numbers on things.
