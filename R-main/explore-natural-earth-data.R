@@ -107,9 +107,9 @@ rast.table$rgb <- with(rast.table, rgb(HYP_LR_SR_W_DR.1,
 
 
 # grab re-ordered locations and put numbers on them
-samps <- read_csv("intermediate_pops.csv") %>%
+samps <- read_csv("data/pops_on_map.csv") %>%
   filter(!is.na(lat)) %>%
-   arrange(Better.Order) %>%
+   arrange(New.Order) %>%
    mutate(Number = 1:nrow(.))
 
 
