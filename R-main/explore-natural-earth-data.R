@@ -107,16 +107,19 @@ rast.table$rgb <- with(rast.table, rgb(HYP_LR_SR_W_DR.1,
 
 
 # grab re-ordered locations and put numbers on them
-samps <- read_csv("data/pops_on_map.csv") %>%
-  filter(!is.na(lat)) %>%
-   arrange(New.Order) %>%
-   mutate(Number = 1:nrow(.))
+#samps <- read_csv("data/pops_on_map.csv") %>%
+#  filter(!is.na(lat)) %>%
+#   arrange(New.Order) %>%
+#   mutate(Number = 1:nrow(.))
 
 
 
 
 # write that out so we have the numbers on things.
-write_csv(samps, path = "output_numbered_pops.csv")
+#write_csv(samps, path = "output_numbered_pops.csv")
+
+# I have them set now in this new file...
+samps <- read_csv("data/MapSamplesTable.csv")
 
 npops <- nrow(samps)
 
