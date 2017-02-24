@@ -26,6 +26,15 @@ ne_rivers <- readOGR('/Users/eriq/Maps/natural-earth-10m/ne_10m_rivers_lake_cent
 usgs_rivers <- readOGR('/Users/eriq/Maps/hydrogm020_nt00015',
                        'hydrogl020')
 
+
+# try getting full NA large rivers:
+na_rivers <- readOGR('/Users/eriq/Maps/Lakes_and_Rivers_Shapefile/NA_Lakes_and_Rivers/data/hydrography_l_rivers_v2/Lakes_and_Rivers_Shapefile/NA_Lakes_and_Rivers/data',
+                     'hydrography_l_rivers_v2')
+# note that these need to be re-projected to the same lat-long system as natural earth
+na_rivers_ll <- spTransform(na_rivers, "+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0")
+
+
+
 # and immediately restrict that to just the western states
 usgs_rivers <- usgs_rivers[usgs_rivers$STATE %in% c("CA", "OR", "WA", "ID", "NV", "MT", "UT", "AZ", "WY"), ]
 
@@ -83,6 +92,8 @@ usgs.subset <- tidy_subset(usgs_rivers, domain) %>%
   filter(F_CODE %in% c(4,5))  # this retains only streams and canals
 state.subset <- tidy_subset(state_prov, domain)
 country.subset <- tidy_subset(country_bound, domain)
+
+north_am_rivers_subset <- tidy_subset(na_rivers_ll, domain)
 
 nat.crop <- crop(nat.earth, y=extent(domain))
 
@@ -160,9 +171,10 @@ g <- ggplot() +
   scale_alpha_discrete(range=c(1,0)) +
   geom_path(data=state.subset, aes(x = long, y = lat, group = group), color = 'gray30') +
   geom_path(data=country.subset, aes(x = long, y = lat, group = group), color = 'gray30') +
-  geom_path(data=river.subset, aes(x = long, y = lat, group = group), color = 'blue', size = 0.2) +
-  geom_path(data=coast.subset, aes(x = long, y = lat, group = group), color = 'blue', size = 0.1) +
-  geom_path(data=usgs.subset, aes(x = long, y = lat, group = group), colour = "blue", size = 0.06) +
+#  geom_path(data=river.subset, aes(x = long, y = lat, group = group), color = 'blue', size = 0.2) +
+  geom_path(data=coast.subset, aes(x = long, y = lat, group = group), color = 'blue', size = 0.1) + 
+  geom_path(data=north_am_rivers_subset, aes(x = long, y = lat, group = group), colour = "blue", size = 0.15) +
+#  geom_path(data=usgs.subset, aes(x = long, y = lat, group = group), colour = "blue", size = 0.06) +
   geom_path(data=lakes.subset, aes(x = long, y = lat, group = group), color = 'blue', size = 0.1) +
   geom_rect(data = samps2, mapping = aes(ymin = ymin, ymax = ymax, xmin = xmin, xmax = anad_xmax), colour = NA, fill = "navy") +
 #  geom_rect(data = pairsB, mapping = aes(ymin = ymin, ymax = anad_ymax, xmin = xmin, xmax = xmax), colour = NA, fill = "navy") +
