@@ -7,6 +7,7 @@ library(readr)
 library(broom)
 library(stringr)
 library(dplyr)
+library(ggspatial)
 
 
 
@@ -15,7 +16,7 @@ library(dplyr)
 
 # NOTE readOGR can't do tilde expansion!!!
 
-nat.earth <- stack('~/Documents/NaturalEarthData/HYP_LR_SR_W_DR/HYP_LR_SR_W_DR.tif')
+nat.earth <- stack('~/Documents/NaturalEarthData/HYP_HR_SR_W/HYP_HR_SR_W.tif')
 
 ne_lakes <- readOGR("/Users/eriq/Maps/natural-earth-10m/ne_10m_lakes",
                     "ne_10m_lakes")
@@ -23,8 +24,8 @@ ne_lakes <- readOGR("/Users/eriq/Maps/natural-earth-10m/ne_10m_lakes",
 ne_rivers <- readOGR('/Users/eriq/Maps/natural-earth-10m/ne_10m_rivers_lake_centerlines',
                      'ne_10m_rivers_lake_centerlines')
 
-usgs_rivers <- readOGR('/Users/eriq/Maps/hydrogm020_nt00015',
-                       'hydrogl020')
+#usgs_rivers <- readOGR('/Users/eriq/Maps/hydrogm020_nt00015',
+#                       'hydrogl020')
 
 
 # try getting full NA large rivers:
@@ -33,10 +34,21 @@ na_rivers <- readOGR('/Users/eriq/Maps/Lakes_and_Rivers_Shapefile/NA_Lakes_and_R
 # note that these need to be re-projected to the same lat-long system as natural earth
 na_rivers_ll <- spTransform(na_rivers, "+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0")
 
+# and then I think we can get polygons of the lakes too
+na_lakes <- readOGR('/Users/eriq/Maps/Lakes_and_Rivers_Shapefile/NA_Lakes_and_Rivers/data/hydrography_p_lakes_v2/Lakes_and_Rivers_Shapefile/NA_Lakes_and_Rivers/data',
+                     'hydrography_p_lakes_v2')
+
+na_lakes_ll <- spTransform(na_lakes, "+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0")
+
+x <- na_lakes_ll
+x@data$id <- rownames(x@data)
+na_lakes_full <- broom::tidy(x) %>%
+  dplyr::left_join(., x@data, by = "id") %>%
+  dplyr::tbl_df()
 
 
 # and immediately restrict that to just the western states
-usgs_rivers <- usgs_rivers[usgs_rivers$STATE %in% c("CA", "OR", "WA", "ID", "NV", "MT", "UT", "AZ", "WY"), ]
+#usgs_rivers <- usgs_rivers[usgs_rivers$STATE %in% c("CA", "OR", "WA", "ID", "NV", "MT", "UT", "AZ", "WY"), ]
 
 ne_coast <- readOGR("/Users/eriq/Maps/natural-earth-10m/ne_10m_coastline",
                     "ne_10m_coastline")
@@ -84,16 +96,19 @@ tidy_subset <- function(x, longlat) {
 
 
 # take subset of all that....It would be better to have all the shapefiles in a named list and lapply it
-domain <- c(-129, -110, 28, 50)
+domain <- c(-136, -110, 28, 58)
 lakes.subset <- tidy_subset(ne_lakes, domain)
 river.subset <- tidy_subset(ne_rivers, domain)
 coast.subset <- tidy_subset(ne_coast, domain)
-usgs.subset <- tidy_subset(usgs_rivers, domain) %>%
-  filter(F_CODE %in% c(4,5))  # this retains only streams and canals
+
+#usgs.subset <- tidy_subset(usgs_rivers, domain) %>%
+#  filter(F_CODE %in% c(4,5))  # this retains only streams and canals
+
 state.subset <- tidy_subset(state_prov, domain)
 country.subset <- tidy_subset(country_bound, domain)
 
 north_am_rivers_subset <- tidy_subset(na_rivers_ll, domain)
+north_am_lakes_subset <- tidy_subset(na_lakes_ll, domain)
 
 nat.crop <- crop(nat.earth, y=extent(domain))
 
@@ -101,9 +116,9 @@ rast.table <- data.frame(xyFromCell(nat.crop, 1:ncell(nat.crop)),
                          getValues(nat.crop/255))
 
 
-rast.table$rgb <- with(rast.table, rgb(HYP_LR_SR_W_DR.1,
-                                       HYP_LR_SR_W_DR.2,
-                                       HYP_LR_SR_W_DR.3,
+rast.table$rgb <- with(rast.table, rgb(HYP_HR_SR_W.1,
+                                       HYP_HR_SR_W.2,
+                                       HYP_HR_SR_W.3,
                                        1))
 
 
@@ -130,9 +145,23 @@ rast.table$rgb <- with(rast.table, rgb(HYP_LR_SR_W_DR.1,
 #write_csv(samps, path = "output_numbered_pops.csv")
 
 # I have them set now in this new file...
-samps <- read_csv("data/MapSamplesTable.csv")
+samps <- read_csv("data/SNP_Survey_Table1.csv", na = c("", "na"))
 
-npops <- nrow(samps)
+
+# filter out the hatcheries pops and the kamchatka ones
+# and order them by latitude first (this will change)
+samps2 <- samps %>%
+  arrange(desc(Latitude)) %>%
+  filter(!is.na(Migratory_Access)) %>%
+  filter(!str_detect(Pop_ID, "kamcha")) %>%
+  arrange(desc(Latitude)) %>%
+  mutate(initial_map_order = 1:n(),
+         trial_map_order = 1:n())
+  
+
+# get an initial order for them by 
+
+npops <- nrow(samps2)
 
 
 
@@ -172,10 +201,17 @@ g <- ggplot() +
   geom_path(data=state.subset, aes(x = long, y = lat, group = group), color = 'gray30') +
   geom_path(data=country.subset, aes(x = long, y = lat, group = group), color = 'gray30') +
 #  geom_path(data=river.subset, aes(x = long, y = lat, group = group), color = 'blue', size = 0.2) +
+#  geom_spatial(data = na_lakes_ll, aes(x = long, y = lat, group = group), fill = 'lightskyblue1') +
   geom_path(data=coast.subset, aes(x = long, y = lat, group = group), color = 'blue', size = 0.1) + 
+#  geom_polygon(data=north_am_rivers_subset, aes(x = long, y = lat, group = group), fill = "white") +
   geom_path(data=north_am_rivers_subset, aes(x = long, y = lat, group = group), colour = "blue", size = 0.15) +
+  geom_point(data = samps2, aes(x = Longitude, y = Latitude))
+
+  
+ggsave(g, filename = "base_map_test.pdf", width = 6, height = 10)
+  
 #  geom_path(data=usgs.subset, aes(x = long, y = lat, group = group), colour = "blue", size = 0.06) +
-  geom_path(data=lakes.subset, aes(x = long, y = lat, group = group), color = 'blue', size = 0.1) +
+#  geom_path(data=lakes.subset, aes(x = long, y = lat, group = group), color = 'blue', size = 0.1) +
   geom_rect(data = samps2, mapping = aes(ymin = ymin, ymax = ymax, xmin = xmin, xmax = anad_xmax), colour = NA, fill = "navy") +
 #  geom_rect(data = pairsB, mapping = aes(ymin = ymin, ymax = anad_ymax, xmin = xmin, xmax = xmax), colour = NA, fill = "navy") +
   geom_rect(data = samps2, mapping = aes(ymin = ymin, ymax = ymax, xmin = xmin, xmax = resA_xmax), colour = NA, fill = "orange") +
@@ -192,7 +228,8 @@ g <- ggplot() +
   geom_segment(data = geno_ones, aes(x = dot_spot_x, xend = long, y = dot_spot_y, yend = lat), colour = "red", size = 0.2) + # LINES
   scale_x_continuous(expand=c(0,0)) +
   scale_y_continuous(expand=c(0,0)) +
-  xlab('') + ylab('')
+  xlab('') + ylab('') +
+  coord_cartesian(xlim = domain[1:2], ylim = domain[3:4])
 
 # library(ggtree)
 # dd <- data.frame(x=LETTERS[1:3], y=1:3)
