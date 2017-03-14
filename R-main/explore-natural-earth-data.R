@@ -144,22 +144,51 @@ rast.table$rgb <- with(rast.table, rgb(HYP_HR_SR_W.1,
 # write that out so we have the numbers on things.
 #write_csv(samps, path = "output_numbered_pops.csv")
 
-# I have them set now in this new file...
-samps <- read_csv("data/SNP_Survey_Table1.csv", na = c("", "na"))
 
 
-# filter out the hatcheries pops and the kamchatka ones
-# and order them by latitude first (this will change)
-samps2 <- samps %>%
-  arrange(desc(Latitude)) %>%
-  filter(!is.na(Migratory_Access)) %>%
-  filter(!str_detect(Pop_ID, "kamcha")) %>%
-  arrange(desc(Latitude)) %>%
-  mutate(initial_map_order = 1:n(),
-         trial_map_order = 1:n())
-  
 
 # get an initial order for them by 
+if(FALSE) {  # this block of code was used by me to order things apprporiately
+  
+  # I have them set now in this new file...
+  samps <- read_csv("data/SNP_Survey_Table1.csv", na = c("", "na"))
+  
+  
+  # filter out the hatcheries pops and the kamchatka ones
+  # and order them by latitude first (this will change)
+  samps2 <- samps %>%
+    arrange(desc(Latitude)) %>%
+    filter(!is.na(Migratory_Access)) %>%
+    filter(!str_detect(Pop_ID, "kamcha")) %>%
+    arrange(desc(Latitude)) %>%
+    mutate(initial_map_order = 1:n(),
+           trial_map_order = 1:n())
+  north_am <- map_data("world")
+  
+  # we will go from 55 to 30 N latitude with the dots
+  dottop <- 57
+  dotbot <- 28 
+  dotn <- nrow(samps2) - 1
+  samp3 <- read_csv("data/omy-5-survey-84-pops.csv") %>%
+    mutate(dot_y = dottop - (trial_map_order - 1) * (dottop - dotbot) / (dotn),
+           dot_x = -136)
+
+  g <- ggplot(mapping = aes(x = long, y = lat)) +
+    geom_polygon(data = north_am, fill = NA, colour = "gray") + 
+    coord_quickmap(xlim = c(-140, -110.0),  ylim = c(27.5, 58)) +
+    geom_segment(data = samp3, aes(x = dot_x, xend = Longitude, y = dot_y, yend = Latitude), size = 0.2) +
+    geom_point(data = samp3, aes(x = dot_x, y = dot_y, colour = Migratory_Access)) +
+    geom_text(data = samp3, aes(x = dot_x - 0.2, y = dot_y, label = trial_map_order), hjust = 1, size = 2.5) +
+    theme_bw()
+  
+  ggsave(g, filename = "order_trials.pdf", width = 10, height = 15)
+}
+
+
+
+#### OK FOLKS, I AM REDOING EVERYTHING BELOW HERE USING THE DATA AS ORDERED
+#### IN data/omy-5-survey-84-pops.csv
+
 
 npops <- nrow(samps2)
 
