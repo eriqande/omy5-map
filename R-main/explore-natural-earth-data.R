@@ -21,8 +21,8 @@ nat.earth <- stack('~/Documents/NaturalEarthData/HYP_HR_SR_W/HYP_HR_SR_W.tif')
 ne_lakes <- readOGR("/Users/eriq/Maps/natural-earth-10m/ne_10m_lakes",
                     "ne_10m_lakes")
 
-ne_rivers <- readOGR('/Users/eriq/Maps/natural-earth-10m/ne_10m_rivers_lake_centerlines',
-                     'ne_10m_rivers_lake_centerlines')
+# ne_rivers <- readOGR('/Users/eriq/Maps/natural-earth-10m/ne_10m_rivers_lake_centerlines',
+#                     'ne_10m_rivers_lake_centerlines')
 
 #usgs_rivers <- readOGR('/Users/eriq/Maps/hydrogm020_nt00015',
 #                       'hydrogl020')
@@ -35,16 +35,16 @@ na_rivers <- readOGR('/Users/eriq/Maps/Lakes_and_Rivers_Shapefile/NA_Lakes_and_R
 na_rivers_ll <- spTransform(na_rivers, "+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0")
 
 # and then I think we can get polygons of the lakes too
-na_lakes <- readOGR('/Users/eriq/Maps/Lakes_and_Rivers_Shapefile/NA_Lakes_and_Rivers/data/hydrography_p_lakes_v2/Lakes_and_Rivers_Shapefile/NA_Lakes_and_Rivers/data',
-                     'hydrography_p_lakes_v2')
+#na_lakes <- readOGR('/Users/eriq/Maps/Lakes_and_Rivers_Shapefile/NA_Lakes_and_Rivers/data/hydrography_p_lakes_v2/Lakes_and_Rivers_Shapefile/NA_Lakes_and_Rivers/data',
+#                     'hydrography_p_lakes_v2')
 
-na_lakes_ll <- spTransform(na_lakes, "+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0")
-
-x <- na_lakes_ll
-x@data$id <- rownames(x@data)
-na_lakes_full <- broom::tidy(x) %>%
-  dplyr::left_join(., x@data, by = "id") %>%
-  dplyr::tbl_df()
+# na_lakes_ll <- spTransform(na_lakes, "+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0")
+# 
+# x <- na_lakes_ll
+# x@data$id <- rownames(x@data)
+# na_lakes_full <- broom::tidy(x) %>%
+#   dplyr::left_join(., x@data, by = "id") %>%
+#   dplyr::tbl_df()
 
 
 # and immediately restrict that to just the western states
@@ -63,20 +63,6 @@ country_bound <- readOGR("/Users/eriq/Maps/natural-earth-10m/ne_10m_admin_0_boun
                          "ne_10m_admin_0_boundary_lines_land")
 
 
-#  function to select just stuff within a given lat-long box. This is superseded by my tidy version
-# quick.subset <- function(x, longlat){
-#   
-#   # longlat should be a vector of four values: c(xmin, xmax, ymin, ymax)
-#   x@data$id <- rownames(x@data)
-#   
-#   x.f = fortify(x, region="id")
-#   x.join = join(x.f, x@data, by="id")
-#   
-#   x.subset <- subset(x.join, x.join$long > longlat[1] & x.join$long < longlat[2] &
-#                        x.join$lat > longlat[3] & x.join$lat < longlat[4])
-#   
-#   x.subset
-# }
 
 # here eric implements the same thing but using tidyverse tools
 tidy_subset <- function(x, longlat) {
@@ -96,9 +82,9 @@ tidy_subset <- function(x, longlat) {
 
 
 # take subset of all that....It would be better to have all the shapefiles in a named list and lapply it
-domain <- c(-136, -110, 28, 58)
+domain <- c(-141, -111.5, 27.5, 58)
 lakes.subset <- tidy_subset(ne_lakes, domain)
-river.subset <- tidy_subset(ne_rivers, domain)
+#river.subset <- tidy_subset(ne_rivers, domain)
 coast.subset <- tidy_subset(ne_coast, domain)
 
 #usgs.subset <- tidy_subset(usgs_rivers, domain) %>%
@@ -108,7 +94,7 @@ state.subset <- tidy_subset(state_prov, domain)
 country.subset <- tidy_subset(country_bound, domain)
 
 north_am_rivers_subset <- tidy_subset(na_rivers_ll, domain)
-north_am_lakes_subset <- tidy_subset(na_lakes_ll, domain)
+#north_am_lakes_subset <- tidy_subset(na_lakes_ll, domain)
 
 nat.crop <- crop(nat.earth, y=extent(domain))
 
@@ -122,151 +108,68 @@ rast.table$rgb <- with(rast.table, rgb(HYP_HR_SR_W.1,
                                        1))
 
 
-# grab the locations such as they are now
-# these 6 lines are leftover from when i was re-ordering things
-# samps <- read_delim("data/MapDataFrame.txt", delim = "\t") %>%
-#   mutate(lat = as.numeric(Lat),
-#          long = as.numeric(Long)) %>%
-#   filter(!is.na(lat)) %>%
-#   arrange(desc(Lat)) %>%
-#   mutate(Number = 1:nrow(.))
+# Get the locations and inversion freqs of 84 pops
+omy5_survey <- read_csv("data/omy-5-survey-84-pops.csv")
 
-
-# grab re-ordered locations and put numbers on them
-#samps <- read_csv("data/pops_on_map.csv") %>%
-#  filter(!is.na(lat)) %>%
-#   arrange(New.Order) %>%
-#   mutate(Number = 1:nrow(.))
-
-
-
-
-# write that out so we have the numbers on things.
-#write_csv(samps, path = "output_numbered_pops.csv")
-
-
-
-
-# get an initial order for them by 
-if(FALSE) {  # this block of code was used by me to order things apprporiately
-  
-  # I have them set now in this new file...
-  samps <- read_csv("data/SNP_Survey_Table1.csv", na = c("", "na"))
-  
-  
-  # filter out the hatcheries pops and the kamchatka ones
-  # and order them by latitude first (this will change)
-  samps2 <- samps %>%
-    arrange(desc(Latitude)) %>%
-    filter(!is.na(Migratory_Access)) %>%
-    filter(!str_detect(Pop_ID, "kamcha")) %>%
-    arrange(desc(Latitude)) %>%
-    mutate(initial_map_order = 1:n(),
-           trial_map_order = 1:n())
-  north_am <- map_data("world")
-  
-  # we will go from 55 to 30 N latitude with the dots
-  dottop <- 57
-  dotbot <- 28 
-  dotn <- nrow(samps2) - 1
-  samp3 <- read_csv("data/omy-5-survey-84-pops.csv") %>%
-    mutate(dot_y = dottop - (trial_map_order - 1) * (dottop - dotbot) / (dotn),
-           dot_x = -136)
-
-  g <- ggplot(mapping = aes(x = long, y = lat)) +
-    geom_polygon(data = north_am, fill = NA, colour = "gray") + 
-    coord_quickmap(xlim = c(-140, -110.0),  ylim = c(27.5, 58)) +
-    geom_segment(data = samp3, aes(x = dot_x, xend = Longitude, y = dot_y, yend = Latitude), size = 0.2) +
-    geom_point(data = samp3, aes(x = dot_x, y = dot_y, colour = Migratory_Access)) +
-    geom_text(data = samp3, aes(x = dot_x - 0.2, y = dot_y, label = trial_map_order), hjust = 1, size = 2.5) +
-    theme_bw()
-  
-  ggsave(g, filename = "order_trials.pdf", width = 10, height = 15)
-}
+# Set up the region in which we put dots, numbers, and horizontal freq bars
+dottop <- 57
+dotbot <- 28 
+rectwidth <- 2.2 # total x dim of bars
+rectsep <- 0.75 # x separation between bars
+bbxlo <- -142.5 # below barrrier lowest x value
+rectheight <- 0.81 * (dottop - dotbot) / nrow(omy5_survey)  # silly to be har
+samp3 <- omy5_survey %>%
+  mutate(dot_y = dottop - (trial_map_order - 1) * (dottop - dotbot) / n(),
+         dot_x = -136) %>%
+  mutate(#xmin = ifelse(Migratory_Access == "Below barrier", bbxlo, bbxlo + rectwidth + rectsep),
+         xmin = bbxlo + rectwidth + rectsep,
+         xmax = xmin + rectwidth,
+         ymin = dot_y - 0.5 * rectheight,
+         ymax = dot_y + 0.5 * rectheight,
+         xres = xmin + rectwidth * InversionFreq) %>%
+  mutate(reseq = ifelse(is.na(Resequenced), FALSE, TRUE))
 
 
 
-#### OK FOLKS, I AM REDOING EVERYTHING BELOW HERE USING THE DATA AS ORDERED
-#### IN data/omy-5-survey-84-pops.csv
-
-
-npops <- nrow(samps2)
-
-
-
-
-# we have 49 to 29 degrees to play with.  That is 20 degrees of latitude.
-# If we do each bar as twice the distance between, that is 2/3 to 1/3.  
-# So, each unit is 20/npairs
-rectwidth <- 1.0
-xA <- -128.5
-height <- 20/npops * .666667
-
-samps2 <- samps %>%
-  mutate(resA = (R08985_4) / R08985_Total,   # frequency of the "resident" allele
-         xmin = xA,
-         xmax = xA + rectwidth) %>%
-  mutate(ymin = 49 - Number * 20/npops,
-         ymax = ymin + height,
-         anad_xmax = xmax,
-         resA_xmax = xmin + rectwidth * resA,
-         labely = ymin + 0.5 * height,
-         labelx = -126.8, 
-         dot_spot_x = -126.6,
-         dot_spot_y = ymin + 0.5 * height
-         )
-
-smidge <- 0.02
-
-geno_ones <- samps2 %>%
-  filter(Reseq == 1)
-
-
-# et voila!
-g <- ggplot() +
+# Make the base map
+base_map <- ggplot() +
   geom_raster(data = rast.table, mapping = aes(x = x, y = y), fill = rast.table$rgb, interpolate = TRUE) +
   geom_polygon(data=lakes.subset, aes(x = long, y = lat, group = group), fill = '#ADD8E6') +
-  scale_alpha_discrete(range=c(1,0)) +
   geom_path(data=state.subset, aes(x = long, y = lat, group = group), color = 'gray30') +
   geom_path(data=country.subset, aes(x = long, y = lat, group = group), color = 'gray30') +
-#  geom_path(data=river.subset, aes(x = long, y = lat, group = group), color = 'blue', size = 0.2) +
-#  geom_spatial(data = na_lakes_ll, aes(x = long, y = lat, group = group), fill = 'lightskyblue1') +
   geom_path(data=coast.subset, aes(x = long, y = lat, group = group), color = 'blue', size = 0.1) + 
-#  geom_polygon(data=north_am_rivers_subset, aes(x = long, y = lat, group = group), fill = "white") +
+  #  geom_polygon(data=north_am_rivers_subset, aes(x = long, y = lat, group = group), fill = "white") +
   geom_path(data=north_am_rivers_subset, aes(x = long, y = lat, group = group), colour = "blue", size = 0.15) +
-  geom_point(data = samps2, aes(x = Longitude, y = Latitude))
+  scale_x_continuous(expand = c(0, 0)) +
+  scale_y_continuous(expand = c(0, 0)) +
+  coord_quickmap(xlim = domain[1:2],  ylim = domain[3:4]) +
+  ylab("North Latitude") +
+  xlab("Longitude") +
+  theme(axis.text.x = element_text(size=15),
+        axis.text.y = element_text(size=15))
+
+# for experimenting with positions, here is a quickly-rendered base-map
+# base_map <- ggplot() +
+#  geom_polygon(data = north_am, mapping = aes(x = long, y = lat), fill = NA, colour = "gray") + 
+#  coord_quickmap(xlim = c(-142, -110.0),  ylim = c(27.5, 58)) +
+#  theme_bw()
+
+#ggsave(base_map, filename = "base_map.pdf", width = 10, height = 15)
+
+# scale_alpha_discrete(range=c(1,0)) +
+
+
+# add to the base-map all the dots and bars and lines
+full_map <- base_map +
+  geom_segment(data = samp3, mapping = aes(x = dot_x, xend = Longitude, y = dot_y, yend = Latitude, colour = reseq), size = 0.2) +
+  geom_point(data = samp3, mapping = aes(x = dot_x, y = dot_y, colour = reseq)) +
+  geom_text(data = samp3, mapping = aes(x = dot_x - 0.2, y = dot_y, label = trial_map_order, colour = reseq), hjust = 1, size = 3.5) +
+  geom_rect(data = samp3, mapping = aes(ymin = ymin, ymax = ymax, xmin = xmin, xmax = xmax), colour = NA, fill = "navy") +
+  geom_rect(data = samp3, mapping = aes(ymin = ymin, ymax = ymax, xmin = xmin, xmax = xres), colour = NA, fill = "orange") +
+  scale_colour_manual(values = c("black", "red")) +
+  guides(colour = FALSE)
 
   
-ggsave(g, filename = "base_map_test.pdf", width = 6, height = 10)
-  
-#  geom_path(data=usgs.subset, aes(x = long, y = lat, group = group), colour = "blue", size = 0.06) +
-#  geom_path(data=lakes.subset, aes(x = long, y = lat, group = group), color = 'blue', size = 0.1) +
-  geom_rect(data = samps2, mapping = aes(ymin = ymin, ymax = ymax, xmin = xmin, xmax = anad_xmax), colour = NA, fill = "navy") +
-#  geom_rect(data = pairsB, mapping = aes(ymin = ymin, ymax = anad_ymax, xmin = xmin, xmax = xmax), colour = NA, fill = "navy") +
-  geom_rect(data = samps2, mapping = aes(ymin = ymin, ymax = ymax, xmin = xmin, xmax = resA_xmax), colour = NA, fill = "orange") +
-#  geom_rect(data = pairsB, mapping = aes(ymin = ymin, ymax = resB_ymax, xmin = xmin, xmax = xmax), colour = NA, fill = "orange") +
-  geom_rect(data = samps2, mapping = aes(ymin = ymin, ymax = ymax, xmin = xmin - smidge, xmax = xmax + smidge), colour = "white", fill = NA) + 
-#  geom_rect(data = pairsB, mapping = aes(ymin = ymin - smidge, ymax = anad_ymax + smidge, xmin = xmin, xmax = xmax), colour = "white", fill = NA) + 
-#  geom_point(data = samps, aes(x = long, y = lat)) +
-#  geom_text(data = samps2, aes(x = long, y = lat, label = Number), size = 0.4) +  # these are tiny numbers at the actual location
-  geom_text(data = samps2, aes(x = labelx, y = labely, label = Number), hjust = 1) +  # BIG NUMBERS
-  geom_point(data = samps2, aes(x = dot_spot_x, y = dot_spot_y), colour = "black") +  # NUMBER POINTS
-  geom_segment(data = samps2, aes(x = dot_spot_x, xend = long, y = dot_spot_y, yend = lat), colour = "black", size = 0.2) + # LINES
-  geom_text(data = geno_ones, aes(x = labelx, y = labely, label = Number), hjust = 1, colour = "red") +  # BIG NUMBERS
-  geom_point(data = geno_ones, aes(x = dot_spot_x, y = dot_spot_y), colour = "red") +  # NUMBER POINTS
-  geom_segment(data = geno_ones, aes(x = dot_spot_x, xend = long, y = dot_spot_y, yend = lat), colour = "red", size = 0.2) + # LINES
-  scale_x_continuous(expand=c(0,0)) +
-  scale_y_continuous(expand=c(0,0)) +
-  xlab('') + ylab('') +
-  coord_cartesian(xlim = domain[1:2], ylim = domain[3:4])
+ggsave(full_map, filename = "full_map.pdf", width = 10, height = 15)
 
-# library(ggtree)
-# dd <- data.frame(x=LETTERS[1:3], y=1:3)
-# pie <- ggplot(dd, aes(x=1, y, fill=x)) + geom_bar(stat="identity", width=1) + coord_polar(theta="y") + theme_inset()
-# 
-# for(l in seq(30,48, by = 1.2)) {
-#   g <- subview(g, pie, -126, l, 0.12, 0.12)
-#   g <- subview(g, pie, -127, l, 0.12, 0.12)
-# }
 
-ggsave(g, filename = "base_map_test.pdf", width = 6, height = 10)
