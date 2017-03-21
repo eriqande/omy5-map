@@ -7,7 +7,9 @@ library(readr)
 library(broom)
 library(stringr)
 library(dplyr)
-library(ggspatial)
+library(ggsn)
+library(mapdata)
+library(grid)
 
 
 
@@ -149,11 +151,13 @@ base_map <- ggplot() +
         axis.text.y = element_text(size=15))
 
 # for experimenting with positions, here is a quickly-rendered base-map
-# base_map <- ggplot() +
-#  geom_polygon(data = north_am, mapping = aes(x = long, y = lat), fill = NA, colour = "gray") + 
-#  coord_quickmap(xlim = c(-142, -110.0),  ylim = c(27.5, 58)) +
-#  theme_bw()
-
+if(FALSE) {
+  north_am <- map_data("world")
+  base_map <- ggplot() +
+    geom_polygon(data = north_am, mapping = aes(x = long, y = lat), fill = NA, colour = "gray") + 
+    coord_quickmap(xlim = domain[1:2],  ylim = domain[3:4]) +
+    theme_bw()
+}
 #ggsave(base_map, filename = "base_map.pdf", width = 10, height = 15)
 
 # scale_alpha_discrete(range=c(1,0)) +
@@ -167,9 +171,36 @@ full_map <- base_map +
   geom_rect(data = samp3, mapping = aes(ymin = ymin, ymax = ymax, xmin = xmin, xmax = xmax), colour = NA, fill = "navy") +
   geom_rect(data = samp3, mapping = aes(ymin = ymin, ymax = ymax, xmin = xmin, xmax = xres), colour = NA, fill = "orange") +
   scale_colour_manual(values = c("black", "red")) +
-  guides(colour = FALSE)
+  guides(colour = FALSE) +
+  north(x.min = domain[-1], x.max = domain[2], y.min = domain[3], y.max = domain[4], location = "bottomleft", anchor = c(x = -122.3, y = 28)) +
+  scalebar(x.min = domain[-1], x.max = domain[2], y.min = domain[3], y.max = domain[4], 
+           location = "bottomleft", dd2km = TRUE, model = "WGS84", dist = 400, anchor = c(x = -125.6, y = 28.5), st.size = 5.5)
 
-  
-ggsave(full_map, filename = "full_map.pdf", width = 10, height = 15)
+
+### Now, work on the world-scale map with the inset:
+wrld <- map_data("world")
+domain_df <- data_frame(point = 1:length(domain), long = rep(domain[1:2], each = 2), lat = c(domain[3:4], rev(domain[3:4])))
+
+inset_world <- ggplot() + 
+  geom_path(data = wrld, aes(x=long, y=lat, group=group), colour="black", size = 0.1) +
+  geom_polygon(data = domain_df, mapping = aes(x = long, y = lat), colour = "red", fill = "red", alpha = 0.3) +
+  coord_map("ortho", orientation=c(41, -132, 0)) +
+  theme_bw() +
+  labs(x = NULL, y = NULL) +
+  theme(axis.title= element_blank(),
+        axis.text = element_blank(),
+        axis.ticks = element_blank(),
+        plot.margin = unit(c(0, 0, 0, 0), "mm"))
 
 
+# make an inset window
+vp <- viewport(width = 0.33, height = 0.163, x = 1.035, y = 0.99, just = c("right", "top"))
+
+# now, see if we can make a pdf of that
+pdf(file = "map_with_inset.pdf", width = 10, height = 15)
+print(full_map)
+print(inset_world, vp = vp)
+dev.off()
+
+
+#ggsave(full_map, filename = "full_map.pdf", width = 10, height = 15)
