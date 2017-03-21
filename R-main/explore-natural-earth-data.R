@@ -203,4 +203,3 @@ print(inset_world, vp = vp)
 dev.off()
 
 
-#ggsave(full_map, filename = "full_map.pdf", width = 10, height = 15)
