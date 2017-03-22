@@ -111,7 +111,7 @@ rast.table$rgb <- with(rast.table, rgb(HYP_HR_SR_W.1,
 
 
 # Get the locations and inversion freqs of 84 pops
-omy5_survey <- read_csv("data/omy-5-survey-84-pops.csv")
+omy5_survey <- read_csv("data/omy-5-survey-83-pops.csv")
 
 # Set up the region in which we put dots, numbers, and horizontal freq bars
 dottop <- 57
@@ -172,7 +172,7 @@ full_map <- base_map +
   geom_rect(data = samp3, mapping = aes(ymin = ymin, ymax = ymax, xmin = xmin, xmax = xres), colour = NA, fill = "orange") +
   scale_colour_manual(values = c("black", "red")) +
   guides(colour = FALSE) +
-  north(x.min = domain[-1], x.max = domain[2], y.min = domain[3], y.max = domain[4], location = "bottomleft", anchor = c(x = -122.3, y = 28)) +
+  #north(x.min = domain[-1], x.max = domain[2], y.min = domain[3], y.max = domain[4], location = "bottomleft", anchor = c(x = -122.3, y = 28)) +
   scalebar(x.min = domain[-1], x.max = domain[2], y.min = domain[3], y.max = domain[4], 
            location = "bottomleft", dd2km = TRUE, model = "WGS84", dist = 400, anchor = c(x = -125.6, y = 28.5), st.size = 5.5)
 
