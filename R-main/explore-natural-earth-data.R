@@ -139,9 +139,9 @@ base_map <- ggplot() +
   geom_polygon(data=lakes.subset, aes(x = long, y = lat, group = group), fill = '#ADD8E6') +
   geom_path(data=state.subset, aes(x = long, y = lat, group = group), color = 'gray30') +
   geom_path(data=country.subset, aes(x = long, y = lat, group = group), color = 'gray30') +
-  geom_path(data=coast.subset, aes(x = long, y = lat, group = group), color = 'blue', size = 0.1) + 
+  geom_path(data=coast.subset, aes(x = long, y = lat, group = group), color = 'gray30', size = 0.01) + 
   #  geom_polygon(data=north_am_rivers_subset, aes(x = long, y = lat, group = group), fill = "white") +
-  geom_path(data=north_am_rivers_subset, aes(x = long, y = lat, group = group), colour = "blue", size = 0.15) +
+  geom_path(data=north_am_rivers_subset, aes(x = long, y = lat, group = group), colour = "gray30", size = 0.15) +
   scale_x_continuous(expand = c(0, 0)) +
   scale_y_continuous(expand = c(0, 0)) +
   coord_quickmap(xlim = domain[1:2],  ylim = domain[3:4]) +
@@ -164,13 +164,19 @@ if(FALSE) {
 
 
 # add to the base-map all the dots and bars and lines
+colRR <- "#E31A1C"
+colAR <- "#FF7F00"
+colAA <- "royalblue4"
+
+  
+  
 full_map <- base_map +
   geom_segment(data = samp3, mapping = aes(x = dot_x, xend = Longitude, y = dot_y, yend = Latitude, colour = reseq), size = 0.2) +
   geom_point(data = samp3, mapping = aes(x = dot_x, y = dot_y, colour = reseq)) +
   geom_text(data = samp3, mapping = aes(x = dot_x - 0.2, y = dot_y, label = trial_map_order, colour = reseq), hjust = 1, size = 3.5) +
-  geom_rect(data = samp3, mapping = aes(ymin = ymin, ymax = ymax, xmin = xmin, xmax = xmax), colour = NA, fill = "navy") +
-  geom_rect(data = samp3, mapping = aes(ymin = ymin, ymax = ymax, xmin = xmin, xmax = xres), colour = NA, fill = "orange") +
-  scale_colour_manual(values = c("black", "red")) +
+  geom_rect(data = samp3, mapping = aes(ymin = ymin, ymax = ymax, xmin = xmin, xmax = xmax), colour = NA, fill = colAA) +
+  geom_rect(data = samp3, mapping = aes(ymin = ymin, ymax = ymax, xmin = xmin, xmax = xres), colour = NA, fill = colRR) +
+  scale_colour_manual(values = c("black", "darkorchid1")) +
   guides(colour = FALSE) +
   #north(x.min = domain[-1], x.max = domain[2], y.min = domain[3], y.max = domain[4], location = "bottomleft", anchor = c(x = -122.3, y = 28)) +
   scalebar(x.min = domain[-1], x.max = domain[2], y.min = domain[3], y.max = domain[4], 
@@ -197,9 +203,12 @@ inset_world <- ggplot() +
 vp <- viewport(width = 0.33, height = 0.163, x = 1.035, y = 0.99, just = c("right", "top"))
 
 # now, see if we can make a pdf of that
-pdf(file = "map_with_inset.pdf", width = 10, height = 15)
+svg(file = "map_with_inset.svg", width = 10, height = 15)
 print(full_map)
 print(inset_world, vp = vp)
 dev.off()
 
+# then use inkscape to place big-creek-inset-vector.svg into there.
+# and also add the north-arrow.svg to it, then save it
+# as mykiss-genome-map-figure.pdf
 
